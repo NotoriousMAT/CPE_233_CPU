@@ -17,19 +17,22 @@ entity Counter_MUX is
 end Counter_MUX;
 
 architecture Behavioral of Counter_MUX is
+signal output : std_logic_vector(9 downTo 0);
 
 begin
    process(MUX_SEL, FROM_IMMED, FROM_STACK)
    begin
       if (MUX_SEL = "00") then
-         MUX_OUTPUT <= FROM_IMMED;
+         output <= FROM_IMMED;
       elsif (MUX_SEL = "01") then
-         MUX_OUTPUT <= FROM_STACK;
+         output <= FROM_STACK;
       elsif (MUX_SEL = "10") then
-         MUX_OUTPUT <= (others => '0');
+         output <= (others => '0');
       else
          --Do nothing
       end if;
    end process;
+
+   MUX_OUTPUT <= output;
 
 end Behavioral;

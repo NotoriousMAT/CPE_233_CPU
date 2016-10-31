@@ -23,7 +23,7 @@ architecture Behavioral of PC_MUX_WRAPPER is
    component PROGRAM_COUNTER is
      Port ( Din                   : in STD_LOGIC_VECTOR(9 downTo 0);
             PC_LD,PC_INC,RST,CLK  : in STD_LOGIC;
-            PC_COUNT         : out STD_LOGIC_VECTOR(9 downTo 0));
+            PC_COUNT              : out STD_LOGIC_VECTOR(9 downTo 0));
    end component;
 
 begin

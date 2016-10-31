@@ -18,7 +18,7 @@ entity ControlUnit is
     Port ( CLK           : in   STD_LOGIC;
            C_FLAG        : in   STD_LOGIC;
            Z_FLAG        : in   STD_LOGIC;
-           INT           : in   STD_LOGIC;
+           INT_IN        : in   STD_LOGIC;
            RESET         : in   STD_LOGIC;
            OPCODE_HI_5   : in   STD_LOGIC_VECTOR (4 downto 0);
            OPCODE_LO_2   : in   STD_LOGIC_VECTOR (1 downto 0);

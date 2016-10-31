@@ -55,7 +55,7 @@ architecture Behavioral of RAT_MCU is
        Port ( CLK           : in   STD_LOGIC;
               C_FLAG        : in   STD_LOGIC;
               Z_FLAG        : in   STD_LOGIC;
-              INT           : in   STD_LOGIC;
+              INT_IN        : in   STD_LOGIC;
               RESET         : in   STD_LOGIC;
               OPCODE_HI_5   : in   STD_LOGIC_VECTOR (4 downto 0);
               OPCODE_LO_2   : in   STD_LOGIC_VECTOR (1 downto 0);
@@ -248,7 +248,7 @@ begin
    port map ( CLK           => CLK, 
               C_FLAG        => s_c_flag,
               Z_FLAG        => s_z_flag,
-              INT           => INT_IN,
+              INT_IN        => INT_IN,
               RESET         => RESET,
               OPCODE_HI_5   => s_instruction(17 downTo 13),
               OPCODE_LO_2   => s_instruction(1 downto 0),
