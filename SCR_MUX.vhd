@@ -10,26 +10,26 @@ use IEEE.STD_LOGIC_1164.ALL;
 --library UNISIM;
 --use UNISIM.VComponents.all;
 
-entity DUAL_MUX_SEL is
+entity SCR_MUX is
   Port ( MUX_0      : in STD_LOGIC_VECTOR(7 downTo 0);
-         MUX_1      : in STD_LOGIC_VECTOR(7 downTo 0);
+         MUX_1      : in STD_LOGIC_VECTOR(9 downTo 0);
          MUX_SEL    : in STD_LOGIC;
-         MUX_OUTPUT : out STD_LOGIC_VECTOR(7 downTo 0));
-end DUAL_MUX_SEL;
+         MUX_OUTPUT : out STD_LOGIC_VECTOR(9 downTo 0));
+end SCR_MUX;
 
-architecture Behavioral of DUAL_MUX_SEL is
-signal output : std_logic_vector(7 downTo 0);
+architecture Behavioral of SCR_MUX is
+signal output : std_logic_vector(9 downTo 0);
 
 begin
    process(MUX_SEL, MUX_0, MUX_1)
    begin
       if (MUX_SEL = '0') then
-         output <= MUX_0;
+         output <= '0' & '0'& MUX_0;
       else
          output <= MUX_1;
       end if;
    end process;
 
    MUX_OUTPUT <= output;
-
+   
 end Behavioral;

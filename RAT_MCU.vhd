@@ -1,25 +1,7 @@
-----------------------------------------------------------------------------------
--- Company: 
--- Engineer: 
--- 
--- Create Date:    20:59:29 02/04/2013 
--- Design Name: 
--- Module Name:    RAT_CPU - Behavioral 
--- Project Name: 
--- Target Devices: 
--- Tool versions: 
--- Description: 
---
--- Dependencies: 
---
--- Revision: 
--- Revision 0.01 - File Created
--- Additional Comments: 
---
-----------------------------------------------------------------------------------
+
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
-
+use IEEE.STD_LOGIC_UNSIGNED.ALL;
 
 entity RAT_MCU is
     Port ( IN_PORT  : in  STD_LOGIC_VECTOR (7 downto 0);
@@ -50,6 +32,31 @@ architecture Behavioral of RAT_MCU is
               Z : out  STD_LOGIC;
               RESULT : out  STD_LOGIC_VECTOR (7 downto 0));
    end component;
+
+   component SCR_MUX is
+     Port ( MUX_0      : in STD_LOGIC_VECTOR(7 downTo 0);
+            MUX_1      : in STD_LOGIC_VECTOR(9 downTo 0);
+            MUX_SEL    : in STD_LOGIC;
+            MUX_OUTPUT : out STD_LOGIC_VECTOR(9 downTo 0));
+   end component;
+
+   component ScratchRAM is
+      Port ( DATA_IN  : in STD_LOGIC_VECTOR(9 downTo 0);
+             WE       : in STD_LOGIC;
+             ADDR     : in STD_LOGIC_VECTOR(7 downTo 0);
+             CLK      : in STD_LOGIC;
+             DATA_OUT : out STD_LOGIC_VECTOR(9 downTo 0));
+   end component;
+
+   component Stack_Pointer is
+      Port ( RST      :  in std_logic;
+          LD       :  in std_logic;
+          INCR     :  in std_logic;
+          DECR     :  in std_logic;
+          CLK      :  in std_logic;
+          DATA_IN  :  in std_logic_vector(7 downTo 0);
+          DATA_OUT : out std_logic_vector(7 downTo 0) );
+   end component Stack_Pointer;
 
    component ControlUnit
        Port ( CLK           : in   STD_LOGIC;
@@ -171,11 +178,14 @@ architecture Behavioral of RAT_MCU is
    signal s_alu_b        : std_logic_vector(7 downTo 0) := (others => '0');
    signal s_alu_c        : std_logic := '0';
    signal s_alu_z        : std_logic := '0';
-   
-   
-   signal s_scr_data_out : std_logic_vector(9 downTo 0) := (others => '0');
    signal s_alu_result   : std_logic_vector(7 downTo 0) := (others => '0');
+   
+   signal s_scr_data_in  : std_logic_vector(9 downTo 0) := (others => '0');
+   signal s_scr_addr_in  : std_logic_vector(7 downTo 0) := (others => '0');
+   signal s_scr_data_out : std_logic_vector(9 downTo 0) := (others => '0');
+   
    signal s_sp_data_out  : std_logic_vector(7 downTo 0) := (others => '0');
+   signal s_sp_data_out2  : std_logic_vector(7 downTo 0) := (others => '0');
 
    -- helpful aliases ------------------------------------------------------------------
    alias s_ir_immed_bits : std_logic_vector(9 downto 0) is s_instruction(12 downto 3); 
@@ -183,6 +193,40 @@ architecture Behavioral of RAT_MCU is
    
 
 begin
+   my_scr_mux1 : SCR_MUX
+   port map ( MUX_0      => s_dx_out,
+              MUX_1      => s_pc_count,
+              MUX_SEL    => s_scr_data_sel,
+              MUX_OUTPUT => s_scr_data_in);
+              
+   sub1: process(s_sp_data_out)
+   begin
+      s_sp_data_out2 <= s_sp_data_out - '1';
+   end process;
+   
+   my_scr_mux2 : QUAD_MUX_SEL
+   port map ( MUX_0      => s_dy_out,
+              MUX_1      => s_instruction(7 downTo 0),
+              MUX_2      => s_sp_data_out,
+              MUX_3      => s_sp_data_out2,
+              MUX_SEL    => s_scr_addr_sel,
+              MUX_OUTPUT => s_scr_addr_in);
+
+   my_ScratchRAM : ScratchRAM
+   port map ( DATA_IN  => s_scr_data_in,
+              WE       => s_scr_wr,
+              ADDR     => s_scr_addr_in,
+              CLK      => CLK,
+              DATA_OUT => s_scr_data_out);
+
+   my_Stack_Pointer : Stack_Pointer
+   port map ( RST      => s_rst,
+              LD       => s_sp_ld,
+              INCR     => s_sp_incr,
+              DECR     => s_sp_decr,
+              CLK      => CLK,
+              DATA_IN  => s_dx_out,
+              DATA_OUT => s_sp_data_out);
 
    my_prog_rom: prog_rom  
    port map(     ADDRESS => s_pc_count, 
@@ -223,12 +267,12 @@ begin
               MUX_OUTPUT => s_alu_b);
 
    my_alu: ALU
-   port map ( A => s_dx_out,       
-              B => s_alu_b,       
-              Cin => s_c_flag,     
-              SEL => s_alu_sel,     
-              C => s_alu_c,       
-              Z => s_alu_z,       
+   port map ( A      => s_dx_out,       
+              B      => s_alu_b,       
+              Cin    => s_c_flag,     
+              SEL    => s_alu_sel,     
+              C      => s_alu_c,       
+              Z      => s_alu_z,       
               RESULT => s_alu_result); 
 
    my_flags: FLAGS 
