@@ -31,7 +31,6 @@ entity RAT_wrapper is
 end RAT_wrapper;
 
 architecture Behavioral of RAT_wrapper is
-
    -- INPUT PORT IDS -------------------------------------------------------------
    -- Right now, the only possible inputs are the switches
    -- In future labs you can add more port IDs, and you'll have
@@ -44,7 +43,18 @@ architecture Behavioral of RAT_wrapper is
    -- In future labs you can add more port IDs
    CONSTANT LEDS_ID       : STD_LOGIC_VECTOR (7 downto 0) := X"40";
    -------------------------------------------------------------------------------
-
+   
+   -- Declare CLK_Divider --------------------------------------------------------
+   component clk_wiz_0 
+      Port (
+     -- Clock in ports
+         clk_in1  : in STD_LOGIC;
+     -- Clock out ports
+         clk_out1 : out STD_LOGIC);
+   end component;
+   
+   signal new_CLK : STD_LOGIC;
+   
    -- Declare RAT_CPU ------------------------------------------------------------
    component RAT_MCU 
        Port ( IN_PORT  : in  STD_LOGIC_VECTOR (7 downto 0);
@@ -69,7 +79,10 @@ architecture Behavioral of RAT_wrapper is
    -------------------------------------------------------------------------------
 
 begin
-
+   CLK_DIV: clk_wiz_0
+   port map( clk_in1  => CLK,
+             clk_out1 => new_CLK);
+             
    -- Instantiate RAT_CPU --------------------------------------------------------
    CPU: RAT_MCU
    port map(  IN_PORT  => s_input_port,
@@ -78,7 +91,7 @@ begin
               RESET    => RST,  
               IO_STRB  => s_load,
               INT_IN   => '0',
-              CLK      => CLK);         
+              CLK      => new_CLK);         
    -------------------------------------------------------------------------------
 
 
@@ -100,9 +113,9 @@ begin
    -- MUX for updating output registers ------------------------------------------
    -- Register updates depend on rising clock edge and asserted load signal
    -------------------------------------------------------------------------------
-   outputs: process(CLK) 
+   outputs: process(new_CLK) 
    begin   
-      if (rising_edge(CLK)) then
+      if (rising_edge(new_CLK)) then
          if (s_load = '1') then 
            
             -- the register definition for the LEDS
