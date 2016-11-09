@@ -226,7 +226,14 @@ case sig_OPCODE_7 is
                   
    -- CALL immed -----------
                when "0010001" =>
+                  SCR_DATA_SEL <= '1';
+                  SCR_WR       <= '1';
                   
+                  PC_LD        <= '1';
+                  PC_MUX_SEL   <= "00";
+                  
+                  SP_DECR      <= '1';
+                  SCR_ADDR_SEL <= "11";
                   
    -- CLC ------------------
                when "0110000" =>
@@ -277,11 +284,17 @@ case sig_OPCODE_7 is
    
    -- LD reg-reg -----------
                when "0001010" =>
+                  RF_WR        <= '1';
+                  RF_WR_SEL    <= "01";
                   
+                  SCR_ADDR_SEL <= "00";
                   
    -- LD reg-immed ---------
                when "1110000" | "1110001" | "1110010" | "1110011" =>
-                  
+                  RF_WR        <= '1';
+                  RF_WR_SEL    <= "01";
+                                
+                  SCR_ADDR_SEL <= "01";
                   
    -- LSL reg --------------
                when "0100000" =>
@@ -337,15 +350,29 @@ case sig_OPCODE_7 is
    
    -- POP reg ------------
                when "0100110" =>
+                  RF_WR        <= '1';
+                  RF_WR_SEL    <= "01";
+                                 
+                  SCR_ADDR_SEL <= "10";
                   
+                  SP_INCR      <= '1';
                   
    -- PUSH reg -----------
                when "0100101" =>
+                  SCR_DATA_SEL  <= '0';
+                  SCR_WR        <= '1';
+                  SCR_ADDR_SEL  <= "11";
                   
+                  SP_DECR       <= '1';
                   
    -- RET ----------------
                when "0110010" =>
+                  PC_LD        <= '1';
+                  PC_MUX_SEL   <= "01";
                   
+                  SCR_ADDR_SEL <= "10";
+                  
+                  SP_INCR      <= '1';
                   
    -- RETID --------------
                when "0110110" =>
@@ -381,11 +408,15 @@ case sig_OPCODE_7 is
                   
    -- ST reg-reg ---------
                when "0001011" =>
-                  
+                  SCR_DATA_SEL <= '0';
+                  SCR_WR       <= '1';
+                  SCR_ADDR_SEL <= "00";
                   
    -- ST reg-immed -------
                when "1110100" | "1110101" | "1110110" | "1110111" =>
-                  
+                  SCR_DATA_SEL <= '0';
+                  SCR_WR       <= '1';
+                  SCR_ADDR_SEL <= "01";
                   
    -- SUB reg-reg --------
                when "0000110" =>
@@ -443,7 +474,7 @@ case sig_OPCODE_7 is
                   
    -- WSP reg ------------
                when "0101000" => 
-                  
+                  SP_LD <= '1';
                   
    
 
