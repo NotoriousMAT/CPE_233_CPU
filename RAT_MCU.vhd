@@ -119,12 +119,12 @@ architecture Behavioral of RAT_MCU is
    end component;
 
    component FLAGS is
-      Port ( FLG_C_SET   : in STD_LOGIC;
-             FLG_C_CLR   : in STD_LOGIC;
-             FLG_C_LD    : in STD_LOGIC;
-             FLG_Z_LD    : in STD_LOGIC;
-             FLG_LD_SEL  : in STD_LOGIC;
-             FLG_SHAD_LD : in STD_LOGIC;
+      Port ( FLAG_C_SET   : in STD_LOGIC;
+             FLAG_C_CLR   : in STD_LOGIC;
+             FLAG_C_LD    : in STD_LOGIC;
+             FLAG_Z_LD    : in STD_LOGIC;
+             FLAG_LD_SEL  : in STD_LOGIC;
+             FLAG_SHAD_LD : in STD_LOGIC;
              C           : in STD_LOGIC;
              Z           : in STD_LOGIC;
              CLK         : in STD_LOGIC;
@@ -278,12 +278,12 @@ begin
    my_flags: FLAGS 
    port map ( C           => s_alu_c,
               Z           => s_alu_z,
-              FLG_C_LD    => s_flg_c_ld,
-              FLG_C_SET   => s_flg_c_set,
-              FLG_Z_LD    => s_flg_z_ld,
-              FLG_C_CLR   => s_flg_c_clr,
-              FLG_LD_SEL  => s_flg_ld_sel,
-              FLG_SHAD_LD => s_flg_shad_ld,
+              FLAG_C_LD    => s_flg_c_ld,
+              FLAG_C_SET   => s_flg_c_set,
+              FLAG_Z_LD    => s_flg_z_ld,
+              FLAG_C_CLR   => s_flg_c_clr,
+              FLAG_LD_SEL  => s_flg_ld_sel,
+              FLAG_SHAD_LD => s_flg_shad_ld,
               CLK         => CLK,
               C_FLAG      => s_c_flag,
               Z_FLAG      => s_z_flag);
