@@ -198,7 +198,7 @@ begin
               MUX_1      => s_pc_count,
               MUX_SEL    => s_scr_data_sel,
               MUX_OUTPUT => s_scr_data_in);
-              
+     
    sub1: process(s_sp_data_out)
    begin
       s_sp_data_out2 <= s_sp_data_out - '1';
