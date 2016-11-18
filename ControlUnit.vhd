@@ -248,7 +248,8 @@ case sig_OPCODE_7 is
                   
    -- CLI ------------------
                when "0110101" =>
-                  I_CLR <= '1';
+                  I_FLAG_SET <= '0';
+                  I_FLAG_CLR <= '1';
                   
    -- CMP reg-reg ----------
                when "0001000" =>
@@ -383,11 +384,45 @@ case sig_OPCODE_7 is
                   
    -- RETID --------------
                when "0110110" =>
-                  I_CLR <= '1';
+                  PC_LD <= '1';
+                  PC_MUX_SEL <= "01";
+                  
+                  SCR_ADDR_SEL <= "10";
+                  SCR_WR <= '0';
+                  
+                  
+                  SP_LD <= '1';
+                  SP_MUX_SEL <= "11";
+                  
+                  FLG_LD_SEL <= '1';
+                  FLG_SHAD_LD <= '0';
+                  FLG_C_LD <='1';
+                  FLG_Z_LD <='1';
+                  
+                  I_FLAG_SET <= '0';
+                  I_FLAG_CLR <= '1';
                   
    -- RETIE --------------
                when "0110111" =>
-                  I_SET <= '1';
+                  PC_LD <= '1';
+                  PC_INC <= '0';
+                  PC_OE <= '0';
+                  PC_MUX_SEL <= "01";
+                  
+                  SCR_ADDR_SEL <= "10";
+                  SCR_WR <= '0';
+                  
+                  
+                  SP_LD <= '1';
+                  SP_MUX_SEL <= "11";
+                  
+                  FLG_LD_SEL <= '1';
+                  FLG_SHAD_LD <= '0';
+                  FLG_C_LD <='1';
+                  FLG_Z_LD <='1';
+                  
+                  I_FLAG_SET <= '1';
+                  I_FLAG_CLR <= '0';
                   
    -- ROL reg ------------
                when "0100010" =>
@@ -411,7 +446,8 @@ case sig_OPCODE_7 is
                   
    -- SEI ----------------
                when "0110100" =>
-                  I_SET <= '1';
+                  I_FLAG_SET <= '1';
+                  I_FLAG_CLR <= '0';
                   
    -- ST reg-reg ---------
                when "0001011" =>
