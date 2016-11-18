@@ -1,0 +1,83 @@
+;------------------------------------------------------------------------
+;- Assembler Directives
+;------------------------------------------------------------------------
+.EQU SEGMENTS		=0x82
+.EQU ANODE			=0x83
+ 
+.DSEG 
+.ORG 0x00 
+Seg_data:			.DB 0x02, 0x9E, 0x24, 0x0C, 0x98 ; 
+ 				      .DB 0x48, 0x40, 0x1E, 0x00, 0x08 ; 
+
+
+.CSEG
+.ORG 0x20 							            ; memory location program
+
+init: 				MOV   	r31,	0x00 		; initialize flag register r31
+			      	MOV    	r1,  	0x00		;ones count
+				      MOV  	  r2,   0x01		;ones anode
+				      MOV    	r3,	  0x02		;tens anode
+ 				      MOV	    r4,  	0x00		;
+ 				      MOV	    r5,	  0x00		;
+				      MOV   	r10,	0x00		;tens
+              MOV  	  r30,	0x00		;
+				      SEI 			          	; unmask interrupts
+;------------------------------------------------------------------------
+;
+Main:				  OUT   	r30, ANODE		;turn off anodes
+              OUT   	r4,  SEGMENTS	;outputs segments
+				      OUT   	r2,  ANODE		;outputs ANODE
+				
+              BRN   	Delay_Loop
+
+tens_out:			MOV  	  r30,0x00		  ;
+				      OUT	    r30,ANODE		  ;
+				      OUT   	r5,SEGMENTS	  ;outputs SEGMENTS 
+				      OUT   	r5,ANODE		  ;outputs ANODE
+				      BRN   	Delay_Loop    ;
+				      MOV  	  r30,0x00	    ;
+              CMP     r31,0x00 	    ; set flags
+				      BREQ 	  main 			    ; branch if r31 = 0
+				      ADD   	r1,0x01		    ;Counts tens place
+				      CMP   	r0,0x0A		    ;
+				      BREQ 	  add_10s		    ;branches after counting to 10 
+
+loop_back:	  LD	r4, (r1)			    ;
+				      LD	r5,(r10)		      ;
+  				    MOV 	r31,0x00 		    ; clear interrupt flag
+				      SEI 				          ; enable the interrupts (unmask)
+				      BRN 	main 			      ; branch to main code
+
+add_10s:			MOV	r10,0x00		      ;Clears 1s place
+				      ADD 	r10,0x01	    	;
+				      CMP 	r10,0x05		    ;Add numbers in 10’s place 
+				      BREQ 	clear_all		    ;
+				      BRN	loop_back		      ;
+
+clear_all:	  MOV 	r10,0x00		    ;Clear 
+				      BRN 	loop_back		    ;
+
+Delay_Loop: 	ADD 	r30,0x01		    ;Used to prevent ghosting 
+				      CMP 	r30, 0xFF		    ;
+				      BREQ 	tens_out		    ;
+;------------------------------------------------------------------------
+;- The ISR:
+;- Description: This ISR sets bit0 in register r31 to act as flag
+;- for the task code.
+;-
+;- Tweaked registers: r31
+;------------------------------------------------------------------------
+ISR: 							                  ; (only a common label)
+				MOV 	      r31,0x01 	      ; set bit0 in r31
+				RETID 		                  ; return with interrupt disabled
+;------------------------------------------------------------------------
+;------------------------------------------------------------------------
+;- Interrupt vector address
+;------------------------------------------------------------------------
+.ORG 	0x3FF 
+
+
+
+
+						                       ; interrupt vector address
+				BRN 	ISR 		             ; jump to interrupt service routine
