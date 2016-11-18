@@ -405,8 +405,7 @@ case sig_OPCODE_7 is
    -- RETIE --------------
                when "0110111" =>
                   PC_LD <= '1';
-                  PC_INC <= '0';
-                  PC_OE <= '0';
+                  PC_INC <= '0';                  
                   PC_MUX_SEL <= "01";
                   
                   SCR_ADDR_SEL <= "10";
