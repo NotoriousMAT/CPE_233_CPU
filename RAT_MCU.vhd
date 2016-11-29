@@ -58,6 +58,21 @@ architecture Behavioral of RAT_MCU is
           DATA_OUT : out std_logic_vector(7 downTo 0) );
    end component Stack_Pointer;
 
+   component Interrupt_Mask is
+   Port ( I_SET   : in STD_LOGIC;
+         I_CLR   : in STD_LOGIC;
+         CLK     : in STD_LOGIC;
+         INT_OUT : out STD_LOGIC);
+   end component;
+
+   -- Declare ONe-Bounce ---------------------------------------------------------
+   component db_1shot_FSM is
+      Port ( A    : in STD_LOGIC;
+             CLK  : in STD_LOGIC;
+             A_DB : out STD_LOGIC);
+   end component;
+   -------------------------------------------------------------------------------
+
    component ControlUnit
        Port ( CLK           : in   STD_LOGIC;
               C_FLAG        : in   STD_LOGIC;
@@ -145,9 +160,12 @@ architecture Behavioral of RAT_MCU is
    signal s_pc_inc       : std_logic := '0'; 
    signal s_pc_mux_sel   : std_logic_vector(1 downto 0) := "00"; 
    signal s_pc_count     : std_logic_vector(9 downto 0) := (others => '0'); 
+   signal s_interrupt    : std_logic := '0';
+   signal s_int_final    : std_logic := '0';
 
    signal s_instruction  : std_logic_vector(17 downto 0) := (others => '0'); 
    
+   signal s_int_in       : std_logic := '0';
    signal s_flg_c_ld     : std_logic := '0';
    signal s_flg_c_clr    : std_logic := '0';
    signal s_flg_c_set    : std_logic := '0';
@@ -288,11 +306,24 @@ begin
               C_FLAG      => s_c_flag,
               Z_FLAG      => s_z_flag);
 
+   my_interrupt_mask: Interrupt_Mask
+   port map ( I_SET     => s_i_set,
+              I_CLR     => s_i_clr,
+              CLK       => CLK,
+              INT_OUT   => s_interrupt);
+
+   debounce: db_1shot_FSM
+   port map( A    => INT_IN,
+             CLK  => CLK,
+             A_DB => s_int_in);
+   
+   s_int_final <= s_int_in and s_interrupt;
+
    my_cpu: ControlUnit 
    port map ( CLK           => CLK, 
               C_FLAG        => s_c_flag,
               Z_FLAG        => s_z_flag,
-              INT_IN        => INT_IN,
+              INT_IN        => s_int_final,
               RESET         => RESET,
               OPCODE_HI_5   => s_instruction(17 downTo 13),
               OPCODE_LO_2   => s_instruction(1 downto 0),

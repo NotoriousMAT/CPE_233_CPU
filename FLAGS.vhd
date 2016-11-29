@@ -42,7 +42,7 @@ begin
     begin
        if( rising_edge(CLK) ) then
           if( FLAG_C_LD = '1' ) then
-             c_out <= C;
+             c_out <= c_in;
           elsif( FLAG_C_SET = '1' ) then
              c_out <= '1';
           elsif( FLAG_C_CLR = '1' ) then
@@ -50,7 +50,7 @@ begin
           end if;
           
           if ( FLAG_Z_LD = '1' ) then
-             z_out <= Z;
+             z_out <= z_in;
           else
           end if;
        end if;

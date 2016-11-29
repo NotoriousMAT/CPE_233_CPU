@@ -27,7 +27,7 @@ begin
       elsif (MUX_SEL = "01") then
          output <= FROM_STACK;
       elsif (MUX_SEL = "10") then
-         output <= (others => '0');
+         output <= "1111111111";
       else
          --Do nothing
       end if;

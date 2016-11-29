@@ -62,6 +62,7 @@ architecture Behavioral of ControlUnit is
 
 type state_type is (ST_init, ST_fet, ST_exec, ST_interrupt);
 signal PS,NS : state_type;
+signal s_i_set, s_i_clr : std_logic := '0';
 signal sig_OPCODE_7: std_logic_vector (6 downto 0);
 begin
     -- concatenate the all opcodes into a 7-bit complete opcode for
@@ -78,7 +79,7 @@ begin
 end process sync_p;
 
 
-   comb_p: process (sig_OPCODE_7, PS, NS)
+   comb_p: process (sig_OPCODE_7, PS, NS, INT_IN, C_FLAG, Z_FLAG)
    begin
     
     -- This is the default block for all signals set in the STATE cases.  Note that any output values desired 
@@ -98,12 +99,27 @@ end process sync_p;
    IO_STRB        <= '0';     RST            <= '0'; 
                                              
 case PS is
+   
    -- STATE: the init cycle ------------------------------------
    -- Initialize all control outputs to non-active states and reset the PC and SP to all zeros.
    when ST_init => 
       NS <= ST_fet;
       RST <= '1';
       RST <= '1';
+         -- STATE: the interrupt cycle -------------------------------
+   when ST_interrupt =>
+      NS <= ST_fet;
+      I_CLR <= '1';
+      I_SET <= '0';
+               
+      SCR_DATA_SEL <= '1';
+      SCR_WR       <= '1';
+      SCR_ADDR_SEL <= "11";
+
+      SP_DECR <= '1';
+             
+      PC_LD        <= '1';
+      PC_MUX_SEL   <= "10";
          -- STATE: the fetch cycle -----------------------------------
    when ST_fet => 
       NS <= ST_exec;
@@ -112,20 +128,20 @@ case PS is
    when ST_exec => 
          if(INT_IN = '0') then 
             NS <= ST_fet;
-
-            PC_LD          <= '0';     RF_WR          <= '0';       FLAG_C_LD      <= '0';     I_SET          <= '0';
-            PC_INC         <= '0';     RF_WR_SEL      <= "00";      FLAG_C_SET     <= '0';     I_CLR          <= '0';
-            PC_MUX_SEL     <= "00";    ALU_OPY_SEL    <= '0';       FLAG_C_CLR     <= '0';
-                                       ALU_SEL        <= "0000";                               FLAG_LD_SEL    <= '0';
-            SP_LD          <= '0';     SCR_DATA_SEL   <= '0';       FLAG_Z_LD      <= '0';     FLAG_SHAD_LD   <= '0';
-            SP_INCR        <= '0';     SCR_WR         <= '0';       FLAG_Z_SET     <= '0';
-            SP_DECR        <= '0';     SCR_ADDR_SEL   <= "00";      FLAG_Z_CLR     <= '0';                 
-                                                                                            
-            IO_STRB        <= '0';     RST            <= '0';  
-         else 
+         else
             NS <= ST_interrupt; 
          end if;
-
+        
+         
+   PC_LD          <= '0';     RF_WR          <= '0';       FLAG_C_LD      <= '0';     I_SET          <= '0';
+   PC_INC         <= '0';     RF_WR_SEL      <= "00";       FLAG_C_SET     <= '0';    I_CLR          <= '0';
+   PC_MUX_SEL     <= "00";    ALU_OPY_SEL    <= '0';       FLAG_C_CLR     <= '0';
+                              ALU_SEL        <= "0000";                               FLAG_LD_SEL    <= '0';
+   SP_LD          <= '0';                                  FLAG_Z_LD      <= '0';     FLAG_SHAD_LD   <= '0';
+   SP_INCR        <= '0';     SCR_WR         <= '0';       FLAG_Z_SET     <= '0';
+   SP_DECR        <= '0';     SCR_ADDR_SEL   <= "00";      FLAG_Z_CLR     <= '0'; 
+                                                                        
+   IO_STRB        <= '0';     RST            <= '0';     
       -- This is the default block for all signals set in the OPCODE cases.  Note that any output values desired 
       -- to be different from these values shown below will be assigned in the individual case statements for 
       -- each opcode.
@@ -248,8 +264,8 @@ case sig_OPCODE_7 is
                   
    -- CLI ------------------
                when "0110101" =>
-                  I_FLAG_SET <= '0';
-                  I_FLAG_CLR <= '1';
+                  I_SET <= '0';
+                  I_CLR <= '1';
                   
    -- CMP reg-reg ----------
                when "0001000" =>
@@ -389,18 +405,15 @@ case sig_OPCODE_7 is
                   
                   SCR_ADDR_SEL <= "10";
                   SCR_WR <= '0';
+                  SP_INCR <= '1';
                   
+                  FLAG_LD_SEL <= '1';
+                  FLAG_SHAD_LD <= '0';
+                  FLAG_C_LD <='1';
+                  FLAG_Z_LD <='1';
                   
-                  SP_LD <= '1';
-                  SP_MUX_SEL <= "11";
-                  
-                  FLG_LD_SEL <= '1';
-                  FLG_SHAD_LD <= '0';
-                  FLG_C_LD <='1';
-                  FLG_Z_LD <='1';
-                  
-                  I_FLAG_SET <= '0';
-                  I_FLAG_CLR <= '1';
+                  I_SET <= '1';
+                  I_CLR <= '0';
                   
    -- RETIE --------------
                when "0110111" =>
@@ -410,18 +423,15 @@ case sig_OPCODE_7 is
                   
                   SCR_ADDR_SEL <= "10";
                   SCR_WR <= '0';
+                  SP_INCR <= '1';
                   
+                  FLAG_LD_SEL <= '1';
+                  FLAG_SHAD_LD <= '0';
+                  FLAG_C_LD <='1';
+                  FLAG_Z_LD <='1';
                   
-                  SP_LD <= '1';
-                  SP_MUX_SEL <= "11";
-                  
-                  FLG_LD_SEL <= '1';
-                  FLG_SHAD_LD <= '0';
-                  FLG_C_LD <='1';
-                  FLG_Z_LD <='1';
-                  
-                  I_FLAG_SET <= '1';
-                  I_FLAG_CLR <= '0';
+                  I_SET <= '0';
+                  I_CLR <= '1';
                   
    -- ROL reg ------------
                when "0100010" =>
@@ -445,8 +455,8 @@ case sig_OPCODE_7 is
                   
    -- SEI ----------------
                when "0110100" =>
-                  I_FLAG_SET <= '1';
-                  I_FLAG_CLR <= '0';
+                  I_SET <= '1';
+                  I_CLR <= '0';
                   
    -- ST reg-reg ---------
                when "0001011" =>
@@ -536,16 +546,15 @@ case sig_OPCODE_7 is
                                                                        
  IO_STRB        <= '0';     RST            <= '0'; 
 
- 
-           end case;
 
+           end case;
           when others => 
   NS <= ST_fet;
    
             -- repeat the default block here to avoid incompletely specified outputs and hence avoid
             -- the problem of inadvertently created latches within the synthesized system.
             PC_LD          <= '0';     RF_WR          <= '0';       FLAG_C_LD      <= '0';     I_SET          <= '0';
-            PC_INC         <= '0';     RF_WR_SEL      <= "00";       FLAG_C_SET     <= '0';     I_CLR          <= '0';
+            PC_INC         <= '0';     RF_WR_SEL      <= "00";       FLAG_C_SET     <= '0';    I_CLR          <= '0';
             PC_MUX_SEL     <= "00";    ALU_OPY_SEL    <= '0';       FLAG_C_CLR     <= '0';
                                        ALU_SEL        <= "0000";                               FLAG_LD_SEL    <= '0';
             SP_LD          <= '0';     SCR_DATA_SEL   <= '0';       FLAG_Z_LD      <= '0';     FLAG_SHAD_LD   <= '0';
@@ -555,4 +564,5 @@ case sig_OPCODE_7 is
             IO_STRB        <= '0';     RST            <= '0'; 
    end case;
    end process comb_p;
+
 end Behavioral;

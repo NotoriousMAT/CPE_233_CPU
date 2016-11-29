@@ -26,6 +26,7 @@ use IEEE.STD_LOGIC_UNSIGNED.ALL;
 entity RAT_wrapper is
     Port ( LEDS     : out   STD_LOGIC_VECTOR (7 downto 0);
            SWITCHES : in    STD_LOGIC_VECTOR (7 downto 0);
+           INT      : in    STD_LOGIC;
            RST      : in    STD_LOGIC;
            CLK      : in    STD_LOGIC);
 end RAT_wrapper;
@@ -72,7 +73,7 @@ architecture Behavioral of RAT_wrapper is
    signal s_output_port : std_logic_vector (7 downto 0);
    signal s_port_id     : std_logic_vector (7 downto 0);
    signal s_load        : std_logic;
-   --signal s_interrupt   : std_logic; -- not yet used
+   signal s_interrupt   : std_logic;
    
    -- Register definitions for output devices ------------------------------------
    signal r_LEDS        : std_logic_vector (7 downto 0); 
@@ -90,10 +91,9 @@ begin
               PORT_ID  => s_port_id,
               RESET    => RST,  
               IO_STRB  => s_load,
-              INT_IN   => '0',
+              INT_IN   => INT,
               CLK      => new_CLK);         
    -------------------------------------------------------------------------------
-
 
    ------------------------------------------------------------------------------- 
    -- MUX for selecting what input to read ---------------------------------------
