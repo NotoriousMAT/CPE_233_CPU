@@ -29,7 +29,7 @@ begin
       elsif (MUX_SEL = "10") then
          output <= "1111111111";
       else
-         --Do nothing
+         output <= "1111111111";
       end if;
    end process;
 

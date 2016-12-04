@@ -44,14 +44,10 @@ signal output : STD_LOGIC := '0';
 begin
 process(I_SET, I_CLR, CLK)
 begin
-   if (rising_edge(CLK) and I_CLR = '1') then
-         output <= '0';
-   end if;
-   if (rising_edge(CLK) and I_SET = '1') then
-         output <= '1';
-   end if;
-   if (rising_edge(CLK) and I_SET = '0') then
-                  output <= '0';
+   if (rising_edge(CLK) ) then
+      if (I_SET = '1') then
+         output <= not I_CLR;
+      end if;
    end if;
 end process;
 

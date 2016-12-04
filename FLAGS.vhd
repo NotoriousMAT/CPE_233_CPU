@@ -38,7 +38,7 @@ begin
        
     end process;
 
-    flag: process(CLK)
+    flag: process(CLK,c_in,z_in,FLAG_C_LD,FLAG_C_SET,FLAG_C_CLR,FLAG_Z_LD)
     begin
        if( rising_edge(CLK) ) then
           if( FLAG_C_LD = '1' ) then
@@ -51,19 +51,16 @@ begin
           
           if ( FLAG_Z_LD = '1' ) then
              z_out <= z_in;
-          else
           end if;
        end if;
     end process;
     
-    shadFlag: process(CLK)
-    begin
+    process(FLAG_SHAD_LD,CLK,c_out,z_out)
+    begin       
        if (rising_edge(CLK)) then
           if (FLAG_SHAD_LD = '1') then
              shad_c <= c_out;
              shad_z <= z_out;
-          else
-             --Do Nothing
           end if;
        end if;
     end process;

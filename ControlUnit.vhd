@@ -106,20 +106,7 @@ case PS is
       NS <= ST_fet;
       RST <= '1';
       RST <= '1';
-         -- STATE: the interrupt cycle -------------------------------
-   when ST_interrupt =>
-      NS <= ST_fet;
-      I_CLR <= '1';
-      I_SET <= '0';
-               
-      SCR_DATA_SEL <= '1';
-      SCR_WR       <= '1';
-      SCR_ADDR_SEL <= "11";
 
-      SP_DECR <= '1';
-             
-      PC_LD        <= '1';
-      PC_MUX_SEL   <= "10";
          -- STATE: the fetch cycle -----------------------------------
    when ST_fet => 
       NS <= ST_exec;
@@ -231,7 +218,6 @@ case sig_OPCODE_7 is
                   if (Z_FLAG = '1') then 
                      PC_LD      <= '1';
                      PC_MUX_SEL <= "00";
-                  else
                   end if;
                
    -- BRN immed ------------
@@ -245,6 +231,7 @@ case sig_OPCODE_7 is
                      PC_LD      <= '1';
                      PC_MUX_SEL <= "00";
                   else
+                     PC_MUX_SEL <= "00";
                   end if;
                   
    -- CALL immed -----------
@@ -253,7 +240,6 @@ case sig_OPCODE_7 is
                   SCR_WR       <= '1';
                   
                   PC_LD        <= '1';
-                  PC_MUX_SEL   <= "00";
                   
                   SP_DECR      <= '1';
                   SCR_ADDR_SEL <= "11";
@@ -264,7 +250,7 @@ case sig_OPCODE_7 is
                   
    -- CLI ------------------
                when "0110101" =>
-                  I_SET <= '0';
+                  I_SET <= '1';
                   I_CLR <= '1';
                   
    -- CMP reg-reg ----------
@@ -384,18 +370,17 @@ case sig_OPCODE_7 is
    -- PUSH reg -----------
                when "0100101" =>
                   SCR_DATA_SEL  <= '0';
-                  SCR_WR        <= '1';
                   SCR_ADDR_SEL  <= "11";
+                  SCR_WR        <= '1';
                   
                   SP_DECR       <= '1';
                   
    -- RET ----------------
                when "0110010" =>
-                  PC_LD        <= '1';
                   PC_MUX_SEL   <= "01";
+                  PC_LD        <= '1';
                   
                   SCR_ADDR_SEL <= "10";
-                  
                   SP_INCR      <= '1';
                   
    -- RETID --------------
@@ -413,7 +398,7 @@ case sig_OPCODE_7 is
                   FLAG_Z_LD <='1';
                   
                   I_SET <= '1';
-                  I_CLR <= '0';
+                  I_CLR <= '1';
                   
    -- RETIE --------------
                when "0110111" =>
@@ -430,8 +415,8 @@ case sig_OPCODE_7 is
                   FLAG_C_LD <='1';
                   FLAG_Z_LD <='1';
                   
-                  I_SET <= '0';
-                  I_CLR <= '1';
+                  I_SET <= '1';
+                  I_CLR <= '0';
                   
    -- ROL reg ------------
                when "0100010" =>
@@ -548,6 +533,23 @@ case sig_OPCODE_7 is
 
 
            end case;
+ 
+         -- STATE: the interrupt cycle -------------------------------
+          when ST_interrupt =>
+             NS <= ST_fet;
+             I_CLR <= '1';
+             I_SET <= '1';
+             
+             FLAG_SHAD_LD   <= '1';
+             SCR_DATA_SEL <= '1';
+             SCR_WR       <= '1';
+             SCR_ADDR_SEL <= "11";
+  
+             SP_DECR <= '1'; 
+               
+             PC_LD        <= '1';
+             PC_MUX_SEL   <= "10";    
+       
           when others => 
   NS <= ST_fet;
    
