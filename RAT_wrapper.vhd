@@ -25,6 +25,8 @@ use IEEE.STD_LOGIC_UNSIGNED.ALL;
 
 entity RAT_wrapper is
     Port ( LEDS     : out   STD_LOGIC_VECTOR (7 downto 0);
+           SEGMENTS : out   STD_LOGIC_VECTOR (7 downto 0);
+           DISP_EN  : out   STD_LOGIC_VECTOR (3 downto 0);
            SWITCHES : in    STD_LOGIC_VECTOR (7 downto 0);
            INT      : in    STD_LOGIC;
            RST      : in    STD_LOGIC;
@@ -32,6 +34,19 @@ entity RAT_wrapper is
 end RAT_wrapper;
 
 architecture Behavioral of RAT_wrapper is
+   component sseg_dec_uni is
+    Port (       COUNT1 : in std_logic_vector(13 downto 0); 
+                 COUNT2 : in std_logic_vector(7 downto 0);
+                    SEL : in std_logic_vector(1 downto 0);
+			      dp_oe : in std_logic;
+                     dp : in std_logic_vector(1 downto 0); 					  
+                    CLK : in std_logic;
+				   SIGN : in std_logic;
+				  VALID : in std_logic;
+                DISP_EN : out std_logic_vector(3 downto 0);
+               SEGMENTS : out std_logic_vector(7 downto 0));
+   end component;
+
    -- INPUT PORT IDS -------------------------------------------------------------
    -- Right now, the only possible inputs are the switches
    -- In future labs you can add more port IDs, and you'll have
@@ -43,6 +58,8 @@ architecture Behavioral of RAT_wrapper is
    -- OUTPUT PORT IDS ------------------------------------------------------------
    -- In future labs you can add more port IDs
    CONSTANT LEDS_ID       : STD_LOGIC_VECTOR (7 downto 0) := X"40";
+   CONSTANT SEGS_ID       : STD_LOGIC_VECTOR (7 downto 0) := X"82";
+   CONSTANT DISP_ID       : STD_LOGIC_VECTOR (7 downto 0) := X"83";
    -------------------------------------------------------------------------------
    
    -- Declare CLK_Divider --------------------------------------------------------
@@ -67,6 +84,11 @@ architecture Behavioral of RAT_wrapper is
               CLK      : in  STD_LOGIC);
    end component RAT_MCU;
    -------------------------------------------------------------------------------
+   
+   --Signals for connecting SSEG to RAT_wrapper ----------------------------------
+  
+   signal s_disp_en     : std_logic_vector (3 downto 0);
+   signal s_segments    : std_logic_vector (7 downto 0);
 
    -- Signals for connecting RAT_CPU to RAT_wrapper -------------------------------
    signal s_input_port  : std_logic_vector (7 downto 0);
@@ -77,6 +99,9 @@ architecture Behavioral of RAT_wrapper is
    
    -- Register definitions for output devices ------------------------------------
    signal r_LEDS        : std_logic_vector (7 downto 0); 
+   signal r_SEGMENT     : std_logic_vector (7 downto 0) := "00000000";
+   signal r_DISP_EN     : std_logic_vector (3 downto 0);
+   signal r_CONTROL_REG : std_logic_vector (13 downto 0) := "00000000000000";
    -------------------------------------------------------------------------------
 
 begin
@@ -119,16 +144,35 @@ begin
          if (s_load = '1') then 
            
             -- the register definition for the LEDS
-            if (s_port_id = LEDS_ID) then
+            if ( s_port_id = LEDS_ID ) then
                r_LEDS <= s_output_port;
+            elsif ( s_port_id = SEGS_ID ) then
+               r_SEGMENT <= s_output_port;
+            elsif ( s_port_id = DISP_ID ) then
+               r_DISP_EN <= "11" & s_output_port(7) & s_output_port(3);
             end if;
            
          end if; 
       end if;
    end process outputs;      
    -------------------------------------------------------------------------------
+   r_CONTROL_REG <= "00000000001001";
+
+   --sseg: sseg_dec_uni
+   --port map (    COUNT1 => r_CONTROL_REG,
+   --              COUNT2 => r_SEGMENT,
+   --                 SEL => "10",
+   --			      dp_oe => '0',
+   --                  dp => "00", 					  
+   --                 CLK => new_CLK,
+   --   			   SIGN => '0',
+	--			  VALID => '1',
+    --            DISP_EN => DISP_EN,
+    --           SEGMENTS => SEGMENTS);
 
    -- Register Interface Assignments ---------------------------------------------
-   LEDS <= r_LEDS; 
+   LEDS <= r_LEDS;
+   SEGMENTS <= r_SEGMENT;
+   DISP_EN <= r_DISP_EN;
 
 end Behavioral;
