@@ -27,6 +27,9 @@ entity RAT_wrapper is
     Port ( LEDS     : out   STD_LOGIC_VECTOR (7 downto 0);
            SEGMENTS : out   STD_LOGIC_VECTOR (7 downto 0);
            DISP_EN  : out   STD_LOGIC_VECTOR (3 downto 0);
+           VGA_RGB  : out   std_logic_vector (7 downto 0);
+           HS       : out   std_logic;
+           VS       : out   std_logic;
            SWITCHES : in    STD_LOGIC_VECTOR (7 downto 0);
            INT      : in    STD_LOGIC;
            RST      : in    STD_LOGIC;
@@ -34,6 +37,7 @@ entity RAT_wrapper is
 end RAT_wrapper;
 
 architecture Behavioral of RAT_wrapper is
+   -- DECLARE 7-Segment ----------------------------------------------------------
    component sseg_dec_uni is
     Port (       COUNT1 : in std_logic_vector(13 downto 0); 
                  COUNT2 : in std_logic_vector(7 downto 0);
@@ -46,12 +50,28 @@ architecture Behavioral of RAT_wrapper is
                 DISP_EN : out std_logic_vector(3 downto 0);
                SEGMENTS : out std_logic_vector(7 downto 0));
    end component;
+   -------------------------------------------------------------------------------
+   
+   -- DECLARE VGA-Driver ---------------------------------------------------------
+   component vgaDriverBuffer is
+   port (         CLK, we : in std_logic;
+                  wa : in std_logic_vector (10 downto 0);
+                  wd : in std_logic_vector (7 downto 0);
+                  Rout : out std_logic_vector(2 downto 0);
+                  Gout : out std_logic_vector(2 downto 0);
+                  Bout : out std_logic_vector(1 downto 0);
+                  HS      : out std_logic;
+                  VS      : out std_logic;
+                  pixelData : out std_logic_vector(7 downto 0));
+   end component;
+   -------------------------------------------------------------------------------
 
    -- INPUT PORT IDS -------------------------------------------------------------
    -- Right now, the only possible inputs are the switches
    -- In future labs you can add more port IDs, and you'll have
    -- to add constants here for the mux below
    CONSTANT SWITCHES_ID : STD_LOGIC_VECTOR (7 downto 0) := X"20";
+   CONSTANT VGA_READ_ID : STD_LOGIC_VECTOR(7 downto 0) := x"93";
    -------------------------------------------------------------------------------
    
    -------------------------------------------------------------------------------
@@ -60,6 +80,9 @@ architecture Behavioral of RAT_wrapper is
    CONSTANT LEDS_ID       : STD_LOGIC_VECTOR (7 downto 0) := X"40";
    CONSTANT SEGS_ID       : STD_LOGIC_VECTOR (7 downto 0) := X"82";
    CONSTANT DISP_ID       : STD_LOGIC_VECTOR (7 downto 0) := X"83";
+   CONSTANT VGA_HADDR_ID : STD_LOGIC_VECTOR  (7 downto 0) := x"90";
+   CONSTANT VGA_LADDR_ID : STD_LOGIC_VECTOR  (7 downto 0) := x"91";
+   CONSTANT VGA_WRITE_ID : STD_LOGIC_VECTOR  (7 downto 0) := x"92";
    -------------------------------------------------------------------------------
    
    -- Declare CLK_Divider --------------------------------------------------------
@@ -84,11 +107,6 @@ architecture Behavioral of RAT_wrapper is
               CLK      : in  STD_LOGIC);
    end component RAT_MCU;
    -------------------------------------------------------------------------------
-   
-   --Signals for connecting SSEG to RAT_wrapper ----------------------------------
-  
-   signal s_disp_en     : std_logic_vector (3 downto 0);
-   signal s_segments    : std_logic_vector (7 downto 0);
 
    -- Signals for connecting RAT_CPU to RAT_wrapper -------------------------------
    signal s_input_port  : std_logic_vector (7 downto 0);
@@ -101,7 +119,14 @@ architecture Behavioral of RAT_wrapper is
    signal r_LEDS        : std_logic_vector (7 downto 0); 
    signal r_SEGMENT     : std_logic_vector (7 downto 0) := "00000000";
    signal r_DISP_EN     : std_logic_vector (3 downto 0);
-   signal r_CONTROL_REG : std_logic_vector (13 downto 0) := "00000000000000";
+   signal r_COUNT1      : std_logic_vector (13 downto 0) := "00000000000000";
+   -------------------------------------------------------------------------------
+
+   -- VGA Signals ----------------------------------------------------------------
+   signal r_vga_we   : std_logic;                       -- Write enable
+   signal r_vga_wa   : std_logic_vector(10 downto 0);   -- The address to read from / write to  
+   signal r_vga_wd   : std_logic_vector(7 downto 0);    -- The pixel data to write to the framebuffer
+   signal r_vgaData  : std_logic_vector(7 downto 0);    -- The pixel data read from the framebuffer
    -------------------------------------------------------------------------------
 
 begin
@@ -123,10 +148,12 @@ begin
    ------------------------------------------------------------------------------- 
    -- MUX for selecting what input to read ---------------------------------------
    -------------------------------------------------------------------------------
-   inputs: process(s_port_id, SWITCHES)
+   inputs: process(s_port_id, SWITCHES, r_vgaData)
    begin
       if (s_port_id = SWITCHES_ID) then
          s_input_port <= SWITCHES;
+      elsif (s_port_id = VGA_READ_ID) then
+         s_input_port <= r_vgaData;
       else
          s_input_port <= x"00";
       end if;
@@ -148,31 +175,52 @@ begin
                r_LEDS <= s_output_port;
             elsif ( s_port_id = SEGS_ID ) then
                r_SEGMENT <= s_output_port;
-            elsif ( s_port_id = DISP_ID ) then
-               r_DISP_EN <= "11" & s_output_port(7) & s_output_port(3);
-            end if;
-           
+            
+            -- VGA support -------------------------------------------
+            elsif (s_port_id = VGA_HADDR_ID) then
+               r_vga_wa(10 downto 6) <= s_output_port(4 downto 0);
+            elsif (s_port_id = VGA_LADDR_ID) then
+               r_vga_wa(5 downto 0) <= s_output_port(5 downto 0);
+            elsif (s_port_id = VGA_WRITE_ID) then
+               r_vga_wd <= s_output_port;
+            end if;              
+                        
+            if( s_port_id = VGA_WRITE_ID ) then
+               r_vga_we <= '1';
+            else
+               r_vga_we <= '0';
+            end if;           
          end if; 
       end if;
    end process outputs;      
    -------------------------------------------------------------------------------
-   r_CONTROL_REG <= "00000000001001";
+   r_COUNT1 <= "000000" & r_SEGMENT;
 
-   --sseg: sseg_dec_uni
-   --port map (    COUNT1 => r_CONTROL_REG,
-   --              COUNT2 => r_SEGMENT,
-   --                 SEL => "10",
-   --			      dp_oe => '0',
-   --                  dp => "00", 					  
-   --                 CLK => new_CLK,
-   --   			   SIGN => '0',
-	--			  VALID => '1',
-    --            DISP_EN => DISP_EN,
-    --           SEGMENTS => SEGMENTS);
+   sseg: sseg_dec_uni
+   port map (    COUNT1 => r_COUNT1,
+                 COUNT2 => "00000000",
+                    SEL => "10",
+   			      dp_oe => '0',
+                     dp => "00", 					  
+                    CLK => new_CLK,
+      			   SIGN => '0',
+				  VALID => '1',
+                DISP_EN => DISP_EN,
+               SEGMENTS => SEGMENTS);
+
+   VGA: vgaDriverBuffer
+   port map(CLK       => new_CLK,
+            WE        => r_vga_we,
+            WA        => r_vga_wa,
+            WD        => r_vga_wd,
+            Rout      => VGA_RGB(7 downto 5),
+            Gout      => VGA_RGB(4 downto 2),
+            Bout      => VGA_RGB(1 downto 0),
+            HS        => HS,
+            VS        => VS,
+            pixelData => r_vgaData);
 
    -- Register Interface Assignments ---------------------------------------------
    LEDS <= r_LEDS;
-   SEGMENTS <= r_SEGMENT;
-   DISP_EN <= r_DISP_EN;
-
-end Behavioral;
+   
+   end Behavioral;
