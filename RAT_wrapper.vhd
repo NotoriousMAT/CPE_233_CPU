@@ -196,7 +196,7 @@ begin
    -------------------------------------------------------------------------------
    r_COUNT1 <= "000000" & r_SEGMENT;
 
-   sseg: sseg_dec_uni
+   seven_seg: sseg_dec_uni
    port map (    COUNT1 => r_COUNT1,
                  COUNT2 => "00000000",
                     SEL => "10",
