@@ -8,6 +8,8 @@
 .EQU KEYBOARD = 0x25
 .EQU SSEG = 0x82
 .EQU LEDS = 0x40
+.EQU RANDOM_NUM_X = 0x20
+.EQU RANDOM_NUM_Y = 0x21
 
 .EQU VGA_READ_ID = 0x93
 .EQU BUTTONS_ID  = 0x94
@@ -27,6 +29,9 @@
 .EQU INSIDE_FOR_COUNT = 0xBE
 
 
+
+;r0 x coordinate for food
+;r1 y coordinate for food
 ;r6 is used for color
 ;r7 is used for Y
 ;r8 is used for X
@@ -203,7 +208,7 @@ draw_up_grow:
 				OUT    r11, VGA_HADD
 				OUT    r12, VGA_LADD
 				OUT    r16, VGA_COLOR
-				BRN    quit
+				BRN    draw_new_point
 
 draw_down_grow:
 				LD     r11, (r15)
@@ -217,7 +222,7 @@ draw_down_grow:
 				OUT    r11, VGA_HADD
 				OUT    r12, VGA_LADD
 				OUT    r16, VGA_COLOR
-				BRN    quit
+				BRN    draw_new_point
 
 draw_left_grow:
 				LD     r11, (r15)
@@ -231,7 +236,7 @@ draw_left_grow:
 				OUT    r11, VGA_HADD
 				OUT    r12, VGA_LADD
 				OUT    r16, VGA_COLOR
-				BRN    quit
+				BRN    draw_new_point
 
 draw_right_grow:
 				LD     r11, (r15)
@@ -245,7 +250,20 @@ draw_right_grow:
 				OUT    r11, VGA_HADD
 				OUT    r12, VGA_LADD
 				OUT    r16, VGA_COLOR
-				BRN    quit
+				BRN    draw_new_point
+
+draw_new_point:
+				IN r0, RANDOM_NUM_X
+				IN r1, RANDOM_NUM_Y
+subtract_x:		SUB r0, 0x1C
+				BRCC subtract_x
+				add r0,0x1C
+subtract_y:		SUB r1, 0x26
+				BRCC subtract_y
+				add r1, 0x26
+				BRN quit
+				
+				
 		
 
 ;loading method
