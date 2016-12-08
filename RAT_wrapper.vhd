@@ -31,6 +31,8 @@ entity RAT_wrapper is
            HS       : out   std_logic;
            VS       : out   std_logic;
            SWITCHES : in    STD_LOGIC_VECTOR (7 downto 0);
+           --down, up, right, left
+           BUTTONS  : in    STD_LOGIC_VECTOR(3 downto 0);
            INT      : in    STD_LOGIC;
            RST      : in    STD_LOGIC;
            CLK      : in    STD_LOGIC);
@@ -71,7 +73,8 @@ architecture Behavioral of RAT_wrapper is
    -- In future labs you can add more port IDs, and you'll have
    -- to add constants here for the mux below
    CONSTANT SWITCHES_ID : STD_LOGIC_VECTOR (7 downto 0) := X"20";
-   CONSTANT VGA_READ_ID : STD_LOGIC_VECTOR(7 downto 0) := x"93";
+   CONSTANT VGA_READ_ID : STD_LOGIC_VECTOR(7 downto 0) := X"93";
+   CONSTANT BUTTONS_ID  : STD_LOGIC_VECTOR(7 downto 0) := X"94";
    -------------------------------------------------------------------------------
    
    -------------------------------------------------------------------------------
@@ -113,7 +116,8 @@ architecture Behavioral of RAT_wrapper is
    signal s_output_port : std_logic_vector (7 downto 0);
    signal s_port_id     : std_logic_vector (7 downto 0);
    signal s_load        : std_logic;
-   signal s_interrupt   : std_logic;
+   signal s_interrupt   : std_logic := '0';
+   signal s_buttons     : std_logic_vector(7 downto 0) := "00000000";
    
    -- Register definitions for output devices ------------------------------------
    signal r_LEDS        : std_logic_vector (7 downto 0); 
@@ -130,6 +134,23 @@ architecture Behavioral of RAT_wrapper is
    -------------------------------------------------------------------------------
 
 begin
+   
+
+   process( BUTTONS)
+   begin
+      if (BUTTONS(0) = '1') then
+         s_buttons <= "00000001";
+      elsif (BUTTONS(1) = '1') then
+         s_buttons <= "00000010";
+      elsif (BUTTONS(2) = '1') then
+         s_buttons <= "00000100";
+      elsif (BUTTONS(3) = '1') then
+         s_buttons <= "00001000";
+      else
+         s_buttons <= "00000000";
+      end if;
+   end process;
+
    CLK_DIV: clk_wiz_0
    port map( clk_in1  => CLK,
              clk_out1 => new_CLK);
@@ -141,19 +162,21 @@ begin
               PORT_ID  => s_port_id,
               RESET    => RST,  
               IO_STRB  => s_load,
-              INT_IN   => INT,
+              INT_IN   => '0',
               CLK      => new_CLK);         
    -------------------------------------------------------------------------------
 
    ------------------------------------------------------------------------------- 
    -- MUX for selecting what input to read ---------------------------------------
    -------------------------------------------------------------------------------
-   inputs: process(s_port_id, SWITCHES, r_vgaData)
+   inputs: process(s_port_id, SWITCHES, r_vgaData, s_buttons)
    begin
       if (s_port_id = SWITCHES_ID) then
          s_input_port <= SWITCHES;
       elsif (s_port_id = VGA_READ_ID) then
          s_input_port <= r_vgaData;
+      elsif (s_port_id = BUTTONS_ID) then
+         s_input_port <= s_buttons;
       else
          s_input_port <= x"00";
       end if;

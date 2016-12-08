@@ -1,16 +1,3 @@
-;---------------------------------------------------------------------
-; An expanded "draw_dot" program that includes subrountines to draw
-; vertical lines, horizontal lines, and a full background. 
-; 
-; As written, this programs does the following: 
-;   1) draws a the background blue (draws all the tiles)
-;   2) draws a red dot
-;   3) draws a red horizontal lines
-;   4) draws a red vertical line
-;
-; Author: Bridget Benson 
-; Modifications: bryan mealy
-;---------------------------------------------------------------------
 
 .CSEG
 .ORG 0x10
@@ -19,23 +6,34 @@
 .EQU VGA_LADD = 0x91
 .EQU VGA_COLOR = 0x92
 .EQU KEYBOARD = 0x25
-.EQU SSEG = 0x81
+.EQU SSEG = 0x82
 .EQU LEDS = 0x40
 
-.EQU BG_COLOR       = 0x1C          ; Background:  blue
-.EQU SNAKE_COLOR    = 0xF0             ; Snake Color: white
+.EQU VGA_READ_ID = 0x93
+.EQU BUTTONS_ID  = 0x94
 
-.EQU OUTSIDE_FOR_COUNT = 0xA0
-.EQU MIDDLE_FOR_COUNT = 0xA0
-.EQU INSIDE_FOR_COUNT = 0xA0
+.EQU BG_COLOR       = 0x1C          ; Background:  blue
+.EQU SNAKE_COLOR    = 0xF0          ; Snake Color: white
+.EQU BLACK          = 0x00
+.EQU FOOD_COLOR     = 0x0F			;
+
+.EQU LEFT   = 0x01
+.EQU RIGHT  = 0x02
+.EQU UP     = 0x04
+.EQU DOWN   = 0x08
+
+.EQU OUTSIDE_FOR_COUNT = 0xBE		
+.EQU MIDDLE_FOR_COUNT = 0xBE
+.EQU INSIDE_FOR_COUNT = 0xBE
+
 
 ;r6 is used for color
 ;r7 is used for Y
 ;r8 is used for X
-;r9
-;r10
-;r11
-;r12
+;r9 more x-location
+;r10 more y-location
+;r11 modifying x
+;r12 modifying y
 ;r13 snake length
 ;r14 storing and loading x-location
 ;r15 storing and loading y-location
@@ -43,17 +41,49 @@
 ;r17 x-value
 ;r18 y-value
 ;r20,21,22 delay registers
-
+;r23 direction
+;r24 r23 register
+;r25 next head square color
+;r26 score
 
 ;---------------------------------------------------------------------
 ;STORING CODE, INITIALIZES SNAKE
 init:
-		 MOV    r7,  0x01
+;test stuff
+		 
+		 MOV    r7,  0x01				; initialize y-axis
+		 MOV    r23, 0x02               ; start going right
          CALL   draw_background         ; draw using default color
-		 MOV    r13, 0x0A
-         MOV    r15, 0x01
-		 MOV    r17, 0x01
-         MOV    r18, 0x03
+
+		 MOV    r16, FOOD_COLOR
+		 MOV    r17, 0x0D				; initialize snake y
+         MOV    r18, 0x0D				; initialize snake x
+		 OUT    r17, VGA_HADD
+         OUT    r18, VGA_LADD
+		 OUT    r16, VGA_COLOR
+
+		 MOV    r17, 0x0D				; initialize snake y
+         MOV    r18, 0x0A				; initialize snake x
+		 OUT    r17, VGA_HADD
+         OUT    r18, VGA_LADD
+		 OUT    r16, VGA_COLOR
+
+		 MOV    r17, 0x0E				; initialize snake y
+         MOV    r18, 0x08				; initialize snake x
+		 OUT    r17, VGA_HADD
+         OUT    r18, VGA_LADD
+		 OUT    r16, VGA_COLOR
+
+		 MOV    r17, 0x08				; initialize snake y
+         MOV    r18, 0x0E				; initialize snake x
+		 OUT    r17, VGA_HADD
+         OUT    r18, VGA_LADD
+		 OUT    r16, VGA_COLOR
+
+		 MOV    r13, 0x0A				; initializes snake size
+         MOV    r15, 0x01				; initialize snake location in memory
+		 MOV    r17, 0x0E				; initialize snake y
+         MOV    r18, 0x0E				; initialize snake x
 
 draw1:
          MOV    r14, r15
@@ -68,11 +98,11 @@ draw1:
 move1:
         ADD     r15, 0x02
 		CMP     r13, r15
-		BRCS    delay0
+		BRCS    delay1
 		ADD		r18, 0x01
 		BRN		draw1
 
-delay0:		    MOV     R20, 0x02    ;Start delay
+delay1:		    MOV     R20, 0x02    ;Start delay
 OUTSIDE_FOR0: 	SUB     R20, 0x01
 
 		        MOV     R21, 0x02
@@ -85,24 +115,17 @@ INSIDE_FOR0:  	SUB     R22, 0x01
 				BRNE    MIDDLE_FOR0
 				OR      R20, 0x00
 				BRNE    OUTSIDE_FOR0
-				BRN	    init2			;Branch to next test
-
+				BRN	    init2			
 
 ;SET SNAKE LENGTH
 init2:
 		 MOV    r13, 0x0A
+		 BRN    initRight
 
-;LOADING CODE, shift down
-init3:
-	     MOV    r15, 0x03
-		 LD     r17, 0x01
-		 LD     r18, 0x00
-		 OUT    r17, VGA_HADD
-         OUT    r18, VGA_LADD
-         MOV    r16, BG_COLOR
-         OUT    r16, VGA_COLOR 
+quit:    RET
 
-draw2:
+;copying method from 0 to (r15)
+draw:
          MOV    r14, r15
 		 MOV    r10, r15
 		 MOV    r9,  r15
@@ -116,40 +139,260 @@ draw2:
 		 ST     r11, (r10)
 		 ST		r12, (r9)
 
-move2:
-        ADD     r15, 0x02
-		CMP     r15, r13
-		BRCC	draw_right1
-		BRN 	draw2
+move:
+		ADD    r15, 0x02
+		CMP    r15, r13
+		BRCC   quit
+		BRN    draw
+
+copy:	MOV    r24, r23
+		RET
+				
+
+;delay method
+delay:		    MOV    r20, OUTSIDE_FOR_COUNT    ;Start delay
+OUTSIDE_FOR: 	SUB    r20, 0x01
+
+		        MOV    r21, MIDDLE_FOR_COUNT
+MIDDLE_FOR:  	SUB    r21, 0x01
+             
+				MOV    r22, INSIDE_FOR_COUNT
+INSIDE_FOR:  	SUB    r22, 0x01
+				BRNE   INSIDE_FOR
+				OR     r21, 0x00
+				BRNE   MIDDLE_FOR
+				OR     r20, 0x00
+				BRNE   OUTSIDE_FOR
+				IN     r23, BUTTONS_ID
+				CMP    r23, 0x00
+				BRNE   copy
+				RET				
+
+;modifying methods
+KILL:	 		MOV    r0, 0xFF
+				OUT    r0, LEDS
+				BRN    KILL
+
+GROW:			MOV    r16, SNAKE_COLOR		
+				OUT    r16, VGA_COLOR
+				ADD    r13, 0x02
+				ADD	   r26, 0x01
+				OUT    r26, SSEG
+				CALL   delay
+				
+				CMP    r24, RIGHT
+				BREQ draw_right_grow
+				CMP    r24, LEFT
+				BREQ draw_left_grow
+				CMP    r24, UP
+				BREQ draw_up_grow
+				CMP    r24, DOWN
+				BREQ draw_down_grow
+
+				RET
+
+draw_up_grow:
+				LD     r11, (r15)
+				LD     r12, (r14)
+
+				SUB    r11, 0x01
+				ADD    r15, 0x02
+				ADD    r14, 0x02
+				ST	   r11, (r15)
+				ST     r12, (r14)
+				OUT    r11, VGA_HADD
+				OUT    r12, VGA_LADD
+				OUT    r16, VGA_COLOR
+				BRN    quit
+
+draw_down_grow:
+				LD     r11, (r15)
+				LD     r12, (r14)
+
+				ADD    r11, 0x01
+				ADD    r15, 0x02
+				ADD    r14, 0x02
+				ST	   r11, (r15)
+				ST     r12, (r14)
+				OUT    r11, VGA_HADD
+				OUT    r12, VGA_LADD
+				OUT    r16, VGA_COLOR
+				BRN    quit
+
+draw_left_grow:
+				LD     r11, (r15)
+				LD     r12, (r14)
+
+				SUB    r12, 0x01
+				ADD    r15, 0x02
+				ADD    r14, 0x02
+				ST	   r11, (r15)
+				ST     r12, (r14)
+				OUT    r11, VGA_HADD
+				OUT    r12, VGA_LADD
+				OUT    r16, VGA_COLOR
+				BRN    quit
+
+draw_right_grow:
+				LD     r11, (r15)
+				LD     r12, (r14)
+
+				ADD    r12, 0x01
+				ADD    r15, 0x02
+				ADD    r14, 0x02
+				ST	   r11, (r15)
+				ST     r12, (r14)
+				OUT    r11, VGA_HADD
+				OUT    r12, VGA_LADD
+				OUT    r16, VGA_COLOR
+				BRN    quit
+		
+
+;loading method
+check_point:	
+				LD     r17, (r15)
+				LD     r18, (r14)
+				OUT    r17, VGA_HADD
+				OUT    r18, VGA_LADD		;LOAD ADDRESS
+				
+				IN     r25, VGA_READ_ID
+				CMP    r25, BLACK
+				BREQ   KILL
+				CMP    r25, SNAKE_COLOR
+				BREQ   KILL
+
+				CMP    r25, FOOD_COLOR
+				BREQ   GROW
+
+
+				MOV    r16, SNAKE_COLOR		
+				OUT    r16, VGA_COLOR
+
+				RET
+
+
+;LOADING CODE, move up
+initUp:
+	     MOV    r15, 0x03
+		 LD     r17, 0x01
+		 LD     r18, 0x00
+		 OUT    r17, VGA_HADD
+         OUT    r18, VGA_LADD
+         MOV    r16, BG_COLOR
+         OUT    r16, VGA_COLOR
+		 CALL   draw
+
+
+draw_up1:
+		SUB     r15, 0x02
+		LD     r11, (r15)
+
+		SUB    r11, 0x01
+		ST	   r11, (r15)
+
+		CALL   check_point
+
+		CALL   delay
+
+		CMP     r24, LEFT
+		BREQ    initLeft
+
+		CMP     r24, RIGHT
+		BREQ    initRight
+
+		BRN	    initUp
+
+
+;LOADING CODE, move dwon
+initDown:
+	     MOV    r15, 0x03
+		 LD     r17, 0x01
+		 LD     r18, 0x00
+		 OUT    r17, VGA_HADD
+         OUT    r18, VGA_LADD
+         MOV    r16, BG_COLOR
+         OUT    r16, VGA_COLOR 
+		 CALL   draw
+
+draw_down1:
+		SUB     r15, 0x02
+		LD     r11, (r15)
+
+		ADD    r11, 0x01
+		ST	   r11, (r15)
+
+		CALL   check_point
+
+		CALL   delay
+
+		CMP     r24, LEFT
+		BREQ    initLeft
+
+		CMP     r24, RIGHT
+		BREQ    initRight
+
+		BRN	    initDown
+
+
+;LOADING CODE, move left
+initLeft:
+	     MOV    r15, 0x03
+		 LD     r17, 0x01
+		 LD     r18, 0x00
+		 OUT    r17, VGA_HADD
+         OUT    r18, VGA_LADD
+         MOV    r16, BG_COLOR
+         OUT    r16, VGA_COLOR 
+		 CALL   draw
+
+draw_left1:
+		SUB     r15, 0x02
+		LD     r12, (r14)
+
+		SUB    r12, 0x01
+		ST	   r12, (r14)
+
+		CALL   check_point
+
+		CALL   delay
+
+		CMP     r24, UP
+		BREQ	initUp
+
+		CMP     r24, DOWN
+		BREQ    initDown
+
+				BRN	    initLeft
+
+;LOADING CODE, move right
+initRight:
+	     MOV    r15, 0x03
+		 LD     r17, 0x01
+		 LD     r18, 0x00
+		 OUT    r17, VGA_HADD
+         OUT    r18, VGA_LADD
+         MOV    r16, BG_COLOR
+         OUT    r16, VGA_COLOR 
+		 CALL   draw
 
 draw_right1:
+		SUB     r15, 0x02
 		LD     r12, (r14)
 
 		ADD    r12, 0x01
 		ST	   r12, (r14)
 
-		LD     r17, (r11)
-		LD     r18, (r14)
-		OUT    r17, VGA_HADD
-        OUT    r18, VGA_LADD
-        MOV    r16, SNAKE_COLOR
-        OUT    r16, VGA_COLOR 
+		CALL   check_point
 
+		CALL   delay
 
-delay1:		    MOV     R20, OUTSIDE_FOR_COUNT    ;Start delay
-OUTSIDE_FOR1: 	SUB     R20, 0x01
+		CMP     r24, UP
+		BREQ	initUp
 
-		        MOV     R21, MIDDLE_FOR_COUNT
-MIDDLE_FOR1:  	SUB     R21, 0x01
-             
-				MOV     R22, INSIDE_FOR_COUNT
-INSIDE_FOR1:  	SUB     R22, 0x01
-				BRNE    INSIDE_FOR1
-				OR      R21, 0x00
-				BRNE    MIDDLE_FOR1
-				OR      R20, 0x00
-				BRNE    OUTSIDE_FOR1
-				BRN	    init3			;Branch to next test
+		CMP     r24, DOWN
+		BREQ    initDown
+
+		BRN	    initRight			;Branch to next test
 
 
 				
@@ -169,14 +412,15 @@ INSIDE_FOR1:  	SUB     R22, 0x01
 ;- Tweaked registers: r8,r9
 ;--------------------------------------------------------------------
 draw_horizontal_line:
-        ADD    r9,0x01          ; go from r8 to r15 inclusive
+				ADD    r9,0x01          ; go from r8 to r15 inclusive
 
 draw_horiz1:
-        CALL   draw_dot         ; 
-        ADD    r8,0x01
-        CMP    r8,r9
-        BRNE   draw_horiz1
-        RET
+				CALL   draw_dot         
+				ADD    r8,0x01
+				CMP    r8,r9
+				BRNE   draw_horiz1
+
+				RET
 ;--------------------------------------------------------------------
 
 
@@ -245,3 +489,12 @@ dd_out:    OUT   r5,VGA_LADD   ; write bot 8 address bits to register
            RET
 
 ; --------------------------------------------------------------------
+
+ISR:       
+		   OUT   r23, LEDS
+		   RETID
+
+.CSEG
+.ORG 0x3FF
+VECTOR:   BRN ISR
+
