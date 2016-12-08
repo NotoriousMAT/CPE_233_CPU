@@ -1,4 +1,3 @@
-
 ;---------------------------------------------------------------------
 ; An expanded "draw_dot" program that includes subrountines to draw
 ; vertical lines, horizontal lines, and a full background. 
@@ -23,12 +22,12 @@
 .EQU SSEG = 0x81
 .EQU LEDS = 0x40
 
-.EQU BG_COLOR       = 0xFF             ; Background:  blue
-.EQU SNAKE_COLOR    = 0x00             ; Snake Color: white
+.EQU BG_COLOR       = 0x1C          ; Background:  blue
+.EQU SNAKE_COLOR    = 0xF0             ; Snake Color: white
 
-.EQU OUTSIDE_FOR_COUNT = 0xBE
-.EQU MIDDLE_FOR_COUNT = 0xBE
-.EQU INSIDE_FOR_COUNT = 0xBE
+.EQU OUTSIDE_FOR_COUNT = 0xA0
+.EQU MIDDLE_FOR_COUNT = 0xA0
+.EQU INSIDE_FOR_COUNT = 0xA0
 
 ;r6 is used for color
 ;r7 is used for Y
@@ -49,11 +48,12 @@
 ;---------------------------------------------------------------------
 ;STORING CODE, INITIALIZES SNAKE
 init:
+		 MOV    r7,  0x01
          CALL   draw_background         ; draw using default color
 		 MOV    r13, 0x0A
          MOV    r15, 0x01
-		 MOV    r17, 0x00
-         MOV    r18, 0x00
+		 MOV    r17, 0x01
+         MOV    r18, 0x03
 
 draw1:
          MOV    r14, r15
@@ -128,7 +128,7 @@ draw_right1:
 		ADD    r12, 0x01
 		ST	   r12, (r14)
 
-		LD     r17, (r15)
+		LD     r17, (r11)
 		LD     r18, (r14)
 		OUT    r17, VGA_HADD
         OUT    r18, VGA_LADD
@@ -214,9 +214,9 @@ draw_vert1:
 ;----------------------------------------------------------------------
 draw_background: 
          MOV   r6,BG_COLOR              ; use default color
-         MOV   r13,0x00                 ; r13 keeps track of rows
+         MOV   r13,0x01                 ; r13 keeps track of rows
 start:   MOV   r7,r13                   ; load current row count 
-         MOV   r8,0x00                  ; restart x coordinates
+         MOV   r8,0x02                  ; restart x coordinates
          MOV   r9,0x27 
  
          CALL  draw_horizontal_line
@@ -239,23 +239,9 @@ draw_dot:
            MOV   r4,r7         ; copy Y coordinate
            MOV   r5,r8         ; copy X coordinate
 
-           AND   r5,0x3F       ; make sure top 2 bits cleared
-           AND   r4,0x1F       ; make sure top 3 bits cleared
-           LSR   r4             ; need to get the bot 2 bits of r4 into sA
-           BRCS  dd_add40
-t1:        LSR   r4
-           BRCS  dd_add80
-
 dd_out:    OUT   r5,VGA_LADD   ; write bot 8 address bits to register
            OUT   r4,VGA_HADD   ; write top 3 address bits to register
            OUT   r6,VGA_COLOR  ; write data to frame buffer
            RET
 
-dd_add40:  OR    r5,0x40       ; set bit if needed
-           CLC                  ; freshen bit
-           BRN   t1             
-
-dd_add80:  OR    r5,0x80       ; set bit if needed
-           BRN   dd_out
 ; --------------------------------------------------------------------
-
